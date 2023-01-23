@@ -1,3 +1,7 @@
+# project .asm
+*.asm
+gen/
+
 ### IntelliJ IDEA ###
 out/
 !**/src/main/**/out/

@@ -73,6 +73,45 @@ public class PrintEASTVisitor extends BaseEASTVisitor<Void,VoidException> {
 	}
 
 	@Override
+	public Void visitNode(GreaterEqualNode n) throws VoidException {
+		printNode(n);
+		visit(n.left);
+		visit(n.right);
+		return null;
+	}
+
+	@Override
+	public Void visitNode(LessEqualNode n) throws VoidException {
+		printNode(n);
+		visit(n.left);
+		visit(n.right);
+		return null;
+	}
+
+	@Override
+	public Void visitNode(NotNode n) throws VoidException {
+		printNode(n);
+		visit(n.exp);
+		return null;
+	}
+
+	@Override
+	public Void visitNode(OrNode n) throws VoidException {
+		printNode(n);
+		visit(n.left);
+		visit(n.right);
+		return null;
+	}
+
+	@Override
+	public Void visitNode(AndNode n) throws VoidException {
+		printNode(n);
+		visit(n.left);
+		visit(n.right);
+		return null;
+	}
+
+	@Override
 	public Void visitNode(TimesNode n) {
 		printNode(n);
 		visit(n.left);
@@ -81,7 +120,23 @@ public class PrintEASTVisitor extends BaseEASTVisitor<Void,VoidException> {
 	}
 
 	@Override
+	public Void visitNode(DivNode n) {
+		printNode(n);
+		visit(n.left);
+		visit(n.right);
+		return null;
+	}
+
+	@Override
 	public Void visitNode(PlusNode n) {
+		printNode(n);
+		visit(n.left);
+		visit(n.right);
+		return null;
+	}
+
+	@Override
+	public Void visitNode(MinusNode n) {
 		printNode(n);
 		visit(n.left);
 		visit(n.right);
@@ -144,4 +199,78 @@ public class PrintEASTVisitor extends BaseEASTVisitor<Void,VoidException> {
 		return null;
 	}
 
+
+	// OBJECT-ORIENTED EXTENSION
+
+
+	@Override
+	public Void visitNode(ClassNode n) throws VoidException {
+		var superClass = n.superID != null ? "extends: " + n.superID : "";
+		printNode(n, n.id + superClass);
+		for (FieldNode par : n.fieldsList) visit(par);
+		for (Node dec : n.methodsList) visit(dec);
+		return null;
+	}
+
+	@Override
+	public Void visitNode(FieldNode n) throws VoidException {
+		printNode(n, n.id);
+		visit(n.getType());
+		return null;
+	}
+
+	@Override
+	public Void visitNode(MethodNode n) throws VoidException {
+		printNode(n,n.id);
+		visit(n.retType);
+		for (ParNode par : n.parlist) visit(par);
+		for (Node dec : n.declist) visit(dec);
+		visit(n.exp);
+		return null;
+	}
+
+	@Override
+	public Void visitNode(ClassCallNode n) throws VoidException {
+		printNode(n,n.id+"."+n.methodId+" at nestinglevel "+n.nl);
+		visit(n.entry);
+		visit(n.methodEntry);
+		for (Node arg : n.arglist) visit(arg);
+		return null;
+	}
+
+	@Override
+	public Void visitNode(NewNode n) throws VoidException {
+		printNode(n,n.id+" at nestinglevel "+n.nl);
+		visit(n.entry);
+		for (Node arg : n.arglist) visit(arg);
+		return null;
+	}
+
+	@Override
+	public Void visitNode(EmptyNode n) throws VoidException {
+		printNode(n);
+		return null;
+	}
+
+	@Override
+	public Void visitNode(ClassTypeNode n) throws VoidException {
+		printNode(n);
+		for (var field : n.allFields) visit(field);
+		for (var method : n.allMethods) visit(method);
+		return null;
+	}
+
+	@Override
+	public Void visitNode(MethodTypeNode n) throws VoidException {
+		printNode(n);
+		for (Node par: n.fun.parlist) visit(par);
+		visit(n.fun.ret,"->"); //marks return type
+		return null;
+	}
+
+	@Override
+	public Void visitNode(RefTypeNode n) throws VoidException {
+		printNode(n, n.id);
+		return null;
+	}
 }

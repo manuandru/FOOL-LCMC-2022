@@ -114,6 +114,85 @@ public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidExcepti
 	}
 
 	@Override
+	public String visitNode(GreaterEqualNode n) throws VoidException {
+		if (print) printNode(n);
+		String l1 = freshLabel();
+		String l2 = freshLabel();
+		return nlJoin(
+				visit(n.right),
+				visit(n.left),
+				"bleq "+l1,
+				"push 0",
+				"b "+l2,
+				l1+":",
+				"push 1",
+				l2+":"
+		);
+	}
+
+	@Override
+	public String visitNode(LessEqualNode n) throws VoidException {
+		if (print) printNode(n);
+		String l1 = freshLabel();
+		String l2 = freshLabel();
+		return nlJoin(
+				visit(n.left),
+				visit(n.right),
+				"bleq "+l1,
+				"push 0",
+				"b "+l2,
+				l1+":",
+				"push 1",
+				l2+":"
+		);
+	}
+
+	@Override
+	public String visitNode(AndNode n) throws VoidException {
+		if (print) printNode(n);
+		String l1 = freshLabel();
+		String l2 = freshLabel();
+		return nlJoin(
+				visit(n.left),
+				visit(n.right),
+				"mult"
+		);
+	}
+
+	@Override
+	public String visitNode(OrNode n) throws VoidException {
+		if (print) printNode(n);
+		String l1 = freshLabel();
+		String l2 = freshLabel();
+		return nlJoin(
+				visit(n.left),
+				visit(n.right),
+				"add",
+				"push 0",
+				"beq " + l1,	// entrambi falsi
+
+				"push 1",		// almeno uno dei due era un vero
+				"b "+l2,
+
+				l1+":",
+				"push 0",
+
+				l2+":"
+		);
+	}
+
+	@Override
+	public String visitNode(NotNode n) throws VoidException {
+		return nlJoin(
+				visit(n.exp),
+				"push -1",
+				"mult",
+				"push 1",
+				"add"
+		);
+	}
+
+	@Override
 	public String visitNode(TimesNode n) {
 		if (print) printNode(n);
 		return nlJoin(
@@ -124,12 +203,32 @@ public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidExcepti
 	}
 
 	@Override
+	public String visitNode(DivNode n) throws VoidException {
+		if (print) printNode(n);
+		return nlJoin(
+				visit(n.left),
+				visit(n.right),
+				"div"
+		);
+	}
+
+	@Override
 	public String visitNode(PlusNode n) {
 		if (print) printNode(n);
 		return nlJoin(
 			visit(n.left),
 			visit(n.right),
 			"add"				
+		);
+	}
+
+	@Override
+	public String visitNode(MinusNode n) throws VoidException {
+		if (print) printNode(n);
+		return nlJoin(
+				visit(n.left),
+				visit(n.right),
+				"sub"
 		);
 	}
 
@@ -177,4 +276,8 @@ public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidExcepti
 		if (print) printNode(n,n.val.toString());
 		return "push "+n.val;
 	}
+
+	// OBJECT-ORIENTED EXTENSION
+
+
 }

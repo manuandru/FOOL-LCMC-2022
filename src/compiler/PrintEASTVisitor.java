@@ -205,7 +205,7 @@ public class PrintEASTVisitor extends BaseEASTVisitor<Void,VoidException> {
 
 	@Override
 	public Void visitNode(ClassNode n) throws VoidException {
-		var superClass = n.superID != null ? "extends: " + n.superID : "";
+		var superClass = n.superID != null ? " extends: " + n.superID : "";
 		printNode(n, n.id + superClass);
 		for (FieldNode par : n.fieldsList) visit(par);
 		for (Node dec : n.methodsList) visit(dec);

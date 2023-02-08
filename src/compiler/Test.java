@@ -23,12 +23,12 @@ public class Test {
     		parser.getNumberOfSyntaxErrors()+" syntax errors.\n");
 
     	System.out.println("Generating AST.");
-    	ASTGenerationSTVisitor visitor = new ASTGenerationSTVisitor(); // use true to visualize the ST
+    	ASTGenerationSTVisitor visitor = new ASTGenerationSTVisitor(false); // use true to visualize the ST
     	Node ast = visitor.visit(st);
     	System.out.println("");
 
     	System.out.println("Enriching AST via symbol table.");
-    	SymbolTableASTVisitor symtableVisitor = new SymbolTableASTVisitor();
+    	SymbolTableASTVisitor symtableVisitor = new SymbolTableASTVisitor(false);
     	symtableVisitor.visit(ast);
     	System.out.println("You had "+symtableVisitor.stErrors+" symbol table errors.\n");
 
@@ -42,23 +42,23 @@ public class Test {
     		TypeNode mainType = typeCheckVisitor.visit(ast);
     		System.out.print("Type of main program expression is: ");
     		new PrintEASTVisitor().visit(mainType);
-    	} catch (IncomplException e) {    		
+    	} catch (IncomplException e) {
     		System.out.println("Could not determine main program expression type due to errors detected before type checking.");
     	} catch (TypeException e) {
-    		System.out.println("Type checking error in main program expression: "+e.text); 
-    	}       	
+    		System.out.println("Type checking error in main program expression: "+e.text);
+    	}
     	System.out.println("You had "+FOOLlib.typeErrors+" type checking errors.\n");
 
     	int frontEndErrors = lexer.lexicalErrors+parser.getNumberOfSyntaxErrors()+symtableVisitor.stErrors+FOOLlib.typeErrors;
 		System.out.println("You had a total of "+frontEndErrors+" front-end errors.\n");
-		
-		if ( frontEndErrors > 0) System.exit(1);   
+
+		if ( frontEndErrors > 0) System.exit(1);
 
     	System.out.println("Generating code.");
-    	String code = new CodeGenerationASTVisitor().visit(ast);        
-    	BufferedWriter out = new BufferedWriter(new FileWriter(fileName+".asm")); 
+    	String code = new CodeGenerationASTVisitor().visit(ast);
+    	BufferedWriter out = new BufferedWriter(new FileWriter(fileName+".asm"));
     	out.write(code);
-    	out.close(); 
+    	out.close();
     	System.out.println("");
 
     	System.out.println("Assembling generated code.");

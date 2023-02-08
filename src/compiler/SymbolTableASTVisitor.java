@@ -69,6 +69,9 @@ public class SymbolTableASTVisitor extends BaseASTVisitor<Void,VoidException> {
 			}
 		for (Node dec : n.declist) visit(dec);
 		visit(n.exp);
+
+		n.setType(new ArrowTypeNode(parTypes, n.retType));
+
 		//rimuovere la hashmap corrente poiche' esco dallo scope               
 		symTable.remove(nestingLevel--);
 		decOffset=prevNLDecOffset; // restores counter for offset of declarations at previous nesting level 
@@ -281,7 +284,7 @@ public class SymbolTableASTVisitor extends BaseASTVisitor<Void,VoidException> {
 		int prevNLDecOffset=decOffset; // stores counter for offset of declarations at previous nesting level
 		decOffset=0;
 
-		if (n.superID != null) {
+		if (n.superID != null && classTable.containsKey(n.superID)) {
 			var lunghezzaField = ((ClassTypeNode) hm.get(n.superID).type).allFields.size();
 			fieldOffset = -lunghezzaField - 1;
 
@@ -345,6 +348,8 @@ public class SymbolTableASTVisitor extends BaseASTVisitor<Void,VoidException> {
 			}
 		}
 
+		n.setType(entry.type);
+
 		//rimuovere la hashmap corrente poiche' esco dallo scope
 		symTable.remove(nestingLevel--);
 		decOffset=prevNLDecOffset; // restores counter for offset of declarations at previous nesting level
@@ -397,6 +402,8 @@ public class SymbolTableASTVisitor extends BaseASTVisitor<Void,VoidException> {
 			}
 		for (Node dec : n.declist) visit(dec);
 		visit(n.exp);
+
+		n.setType(new MethodTypeNode(new ArrowTypeNode(parTypes, n.retType)));
 
 		//rimuovere la hashmap corrente poiche' esco dallo scope del motodo
 		symTable.remove(nestingLevel--);

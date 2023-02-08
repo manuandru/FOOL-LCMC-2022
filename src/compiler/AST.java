@@ -39,7 +39,7 @@ public class AST {
 	    	exp=e;
 	    }
 		
-		//void setType(TypeNode t) {type = t;}
+		void setType(TypeNode t) {type = t;}
 		
 		@Override
 		public <S,E extends Exception> S accept(BaseASTVisitor<S,E> visitor) throws E {return visitor.visitNode(this);}
@@ -250,6 +250,8 @@ public class AST {
 			this.superID = superID;
 		}
 
+		void setType(TypeNode t) {type = t;}
+
 		public <S,E extends Exception> S accept(BaseASTVisitor<S,E> visitor) throws E {return visitor.visitNode(this);}
 	}
 
@@ -258,7 +260,6 @@ public class AST {
 		int offset;
 		FieldNode(String i, TypeNode t) {id = i; type = t;}
 
-		void setType(TypeNode t) {type = t;}
 		@Override
 		public <S,E extends Exception> S accept(BaseASTVisitor<S,E> visitor) throws E {return visitor.visitNode(this);}
 	}
@@ -278,7 +279,7 @@ public class AST {
 			exp=e;
 		}
 
-		//void setType(TypeNode t) {type = t;}
+		void setType(TypeNode t) {type = t;}
 
 		@Override
 		public <S,E extends Exception> S accept(BaseASTVisitor<S,E> visitor) throws E {return visitor.visitNode(this);}

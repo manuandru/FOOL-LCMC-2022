@@ -3,12 +3,18 @@ package compiler;
 import compiler.AST.*;
 import compiler.lib.*;
 import compiler.exc.*;
+import svm.ExecuteVM;
+
+import java.util.ArrayList;
+import java.util.List;
+
 import static compiler.lib.FOOLlib.*;
 
 public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidException> {
 
-  CodeGenerationASTVisitor() {}
-  CodeGenerationASTVisitor(boolean debug) {super(false,debug);} //enables print for debugging
+	private List<List<String>> dispatchTables = new ArrayList<>();
+  	CodeGenerationASTVisitor() {}
+  	CodeGenerationASTVisitor(boolean debug) {super(false,debug);} //enables print for debugging
 
 	@Override
 	public String visitNode(ProgLetInNode n) {
@@ -16,8 +22,8 @@ public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidExcepti
 		String declCode = null;
 		for (Node dec : n.declist) declCode=nlJoin(declCode,visit(dec));
 		return nlJoin(
-			"push 0",	
-			declCode, // generate code for declarations (allocation)			
+			"push 0",
+			declCode, // generate code for declarations (allocation)
 			visit(n.exp),
 			"halt",
 			getCode()
@@ -61,7 +67,7 @@ public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidExcepti
 				"js"  // jump to to popped address
 			)
 		);
-		return "push "+funl;		
+		return "push "+funl;
 	}
 
 	@Override
@@ -83,7 +89,7 @@ public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidExcepti
 	public String visitNode(IfNode n) {
 		if (print) printNode(n);
 	 	String l1 = freshLabel();
-	 	String l2 = freshLabel();		
+	 	String l2 = freshLabel();
 		return nlJoin(
 			visit(n.cond),
 			"push 1",
@@ -199,7 +205,7 @@ public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidExcepti
 			visit(n.left),
 			visit(n.right),
 			"mult"
-		);	
+		);
 	}
 
 	@Override
@@ -218,7 +224,7 @@ public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidExcepti
 		return nlJoin(
 			visit(n.left),
 			visit(n.right),
-			"add"				
+			"add"
 		);
 	}
 
@@ -238,18 +244,40 @@ public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidExcepti
 		String argCode = null, getAR = null;
 		for (int i=n.arglist.size()-1;i>=0;i--) argCode=nlJoin(argCode,visit(n.arglist.get(i)));
 		for (int i = 0;i<n.nl-n.entry.nl;i++) getAR=nlJoin(getAR,"lw");
-		return nlJoin(
-			"lfp", // load Control Link (pointer to frame of function "id" caller)
-			argCode, // generate code for argument expressions in reversed order
-			"lfp", getAR, // retrieve address of frame containing "id" declaration
-                          // by following the static chain (of Access Links)
-            "stm", // set $tm to popped value (with the aim of duplicating top of stack)
-            "ltm", // load Access Link (pointer to frame of function "id" declaration)
-            "ltm", // duplicate top of stack
-            "push "+n.entry.offset, "add", // compute address of "id" declaration
-			"lw", // load address of "id" function
-            "js"  // jump to popped address (saving address of subsequent instruction in $ra)
-		);
+
+		if (n.entry.type instanceof MethodTypeNode tt) {
+
+			return nlJoin(
+					"lfp", // load Control Link (pointer to frame of function "id" caller)
+					argCode, // generate code for argument expressions in reversed order
+					"lfp",
+
+					"lw", // load object pointer
+					"lw", // load dispatch pointer
+
+					"stm", // set $tm to popped value (with the aim of duplicating top of stack)
+					"ltm", // load Access Link (pointer to frame of function "id" declaration)
+					"ltm", // duplicate top of stack
+
+					"push " + n.entry.offset, "add", // compute address of "id" declaration from dispatch table
+					"lw", // load address of "id" function
+					"js"  // jump to popped address (saving address of subsequent instruction in $ra)
+			);
+
+		} else {
+			return nlJoin(
+					"lfp", // load Control Link (pointer to frame of function "id" caller)
+					argCode, // generate code for argument expressions in reversed order
+					"lfp", getAR, // retrieve address of frame containing "id" declaration
+					// by following the static chain (of Access Links)
+					"stm", // set $tm to popped value (with the aim of duplicating top of stack)
+					"ltm", // load Access Link (pointer to frame of function "id" declaration)
+					"ltm", // duplicate top of stack
+					"push " + n.entry.offset, "add", // compute address of "id" declaration
+					"lw", // load address of "id" function
+					"js"  // jump to popped address (saving address of subsequent instruction in $ra)
+			);
+		}
 	}
 
 	@Override
@@ -280,4 +308,160 @@ public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidExcepti
 	// OBJECT-ORIENTED EXTENSION
 
 
+	@Override
+	public String visitNode(ClassNode n) throws VoidException {
+		if (print) printNode(n,n.id);
+
+		var dTable = new ArrayList<String>();
+		dispatchTables.add(dTable);
+
+		if (n.superEntry != null) {
+			var superDispatchTable = dispatchTables.get(-n.superEntry.offset -2);
+			dTable.addAll(superDispatchTable);
+		}
+
+		for (var method : n.methodsList) {
+			visit(method);
+
+			if (method.offset >= dTable.size()) {
+				dTable.add(method.label);
+			} else {
+				dTable.set(method.offset, method.label);
+			}
+		}
+
+		String dTableHeap = null;
+		for (var label : dTable) {
+			dTableHeap= nlJoin(
+					dTableHeap,
+
+					// memorizzo la label in posizione hp
+					"push " + label,
+					"lhp",
+					"sw",
+
+					// incremento hp
+					"lhp",
+					"push 1",
+					"add",
+					"shp"
+				);
+		}
+
+		return nlJoin(
+				"lhp", // lascio il dispatch pointer sullo stack
+				dTableHeap
+		);
+	}
+
+	@Override
+	public String visitNode(MethodNode n) throws VoidException {
+		if (print) printNode(n,n.id);
+		String declCode = null, popDecl = null, popParl = null;
+		for (Node dec : n.declist) {
+			declCode = nlJoin(declCode,visit(dec));
+			popDecl = nlJoin(popDecl,"pop");
+		}
+		for (int i=0;i<n.parlist.size();i++) popParl = nlJoin(popParl,"pop");
+		String funl = freshFunLabel();
+
+		n.label = funl;
+
+		putCode(
+				nlJoin(
+						funl+":",
+						"cfp", // set $fp to $sp value
+						"lra", // load $ra value
+						declCode, // generate code for local declarations (they use the new $fp!!!)
+						visit(n.exp), // generate code for function body expression
+						"stm", // set $tm to popped value (function result)
+						popDecl, // remove local declarations from stack
+						"sra", // set $ra to popped value
+						"pop", // remove Access Link from stack
+						popParl, // remove parameters from stack
+						"sfp", // set $fp to popped value (Control Link)
+						"ltm", // load $tm value (function result)
+						"lra", // load $ra value
+						"js"  // jump to to popped address
+				)
+		);
+
+		return null;
+	}
+
+	@Override
+	public String visitNode(ClassCallNode n) throws VoidException {
+		if (print) printNode(n,n.id);
+		String argCode = null, getAR = null;
+		for (int i=n.arglist.size()-1;i>=0;i--) argCode=nlJoin(argCode,visit(n.arglist.get(i)));
+		for (int i = 0;i<n.nl-n.entry.nl;i++) getAR=nlJoin(getAR,"lw");
+		return nlJoin(
+				"lfp", // load Control Link (pointer to frame of method "id" caller)
+				argCode, // generate code for argument expressions in reversed order
+				"lfp", getAR, 					// retrieve address of frame containing "id1" declaration
+												// by following the static chain (of Access Links)
+
+				"push "+n.entry.offset, "add", 	// compute address of "id1" declaration
+				"lw", 							// load value of "id1" variable
+
+				"stm", // set $tm to popped value (with the aim of duplicating top of stack)
+				"ltm", // load Access Link (pointer to frame of "id1" declaration)
+				"ltm", // duplicate top of stack
+
+				"lw", // load object pointer
+
+				"push "+n.methodEntry.offset, "add", // compute address of "id2" in dispatch table
+				"lw", // load dispatch pointer
+				"js"  // jump to popped address (saving address of subsequent instruction in $ra)
+		);
+	}
+
+	@Override
+	public String visitNode(NewNode n) throws VoidException {
+		if (print) printNode(n,n.id);
+
+		String argCode = null, moveArgOnHeap = null;
+		for (int i=0; i < n.arglist.size(); i++) {
+			argCode = nlJoin(argCode, visit(n.arglist.get(i)));
+
+			moveArgOnHeap = nlJoin(
+					moveArgOnHeap,
+					"lhp",	// mette hp sullo stack
+					"sw",			// carica arg in posizione hp
+
+					// incremento hp
+					"lhp",
+					"push 1",
+					"add",
+					"shp"
+			);
+		}
+
+		return nlJoin(
+				// 1. copia gli argomenti nell'heap
+				argCode,
+				moveArgOnHeap,
+
+				// 2. scrive dispatch pointer
+				"push " + (ExecuteVM.MEMSIZE + n.entry.offset),
+				"lw",		// dispatch pointer su stack
+				"lhp",
+				"sw",
+
+				// 3. hp su stack
+				"lhp",
+
+				// inc hp
+				"lhp",
+				"push 1",
+				"add",
+				"shp"
+		);
+	}
+
+	@Override
+	public String visitNode(EmptyNode n) throws VoidException {
+		if (print) printNode(n);
+		return "push -1";
+	}
 }

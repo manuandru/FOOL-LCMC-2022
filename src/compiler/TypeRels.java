@@ -19,6 +19,26 @@ public class TypeRels {
 				|| checkMethodSubtyping(a, b);
 	}
 
+	public static TypeNode lowestCommonAncestor(TypeNode a, TypeNode b) {
+
+		if (isSubtype(a, b)) return b;
+		if (isSubtype(b, a)) return a;
+
+		if (!(a instanceof RefTypeNode aType)) return null;
+
+		var superClassA = superType.get(aType.id);
+		while (superClassA != null) {
+			var typeOfSuperA = new RefTypeNode(superClassA);
+			if (isSubtype(b, typeOfSuperA)) {
+				return typeOfSuperA;
+			}
+
+			superClassA = superType.get(superClassA);
+		}
+
+		return null;
+	}
+
 	/**
 	 *  Stesso tipo o a=BoolTypeNode e b=IntTypeNode
  	 */

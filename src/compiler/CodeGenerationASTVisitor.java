@@ -250,14 +250,12 @@ public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidExcepti
 			return nlJoin(
 					"lfp", // load Control Link (pointer to frame of function "id" caller)
 					argCode, // generate code for argument expressions in reversed order
-					"lfp",
-
-					"lw", // load object pointer
-					"lw", // load dispatch pointer
-
+					"lfp", getAR,
 					"stm", // set $tm to popped value (with the aim of duplicating top of stack)
 					"ltm", // load Access Link (pointer to frame of function "id" declaration)
 					"ltm", // duplicate top of stack
+
+					"lw",	// dispatch pointer
 
 					"push " + n.entry.offset, "add", // compute address of "id" declaration from dispatch table
 					"lw", // load address of "id" function

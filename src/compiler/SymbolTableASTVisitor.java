@@ -296,7 +296,7 @@ public class SymbolTableASTVisitor extends BaseASTVisitor<Void,VoidException> {
 
 			// Ottimizzazione - evito override interni alla classe
 			if (actualField.contains(field.id)) {
-				System.out.println("Field " + field.id + " at line "+ n.getLine() +" already declared");
+				System.out.println("Field " + field.id + " at in class line "+ n.getLine() +" multiple defined");
 				stErrors++;
 			} else {
 				actualField.add(field.id);
@@ -306,7 +306,7 @@ public class SymbolTableASTVisitor extends BaseASTVisitor<Void,VoidException> {
 				var STentryToOverride = virtualTable.get(field.id);
 
 				if (STentryToOverride.type instanceof MethodTypeNode) { // cannot override field with method
-					System.out.println("Cannot override field id " + field.id + " at line "+ n.getLine() + "with a method");
+					System.out.println("Cannot override method with field id " + field.id + " at line "+ n.getLine());
 					stErrors++;
 				} else {
 					// 1. Virtual Table update
@@ -331,7 +331,7 @@ public class SymbolTableASTVisitor extends BaseASTVisitor<Void,VoidException> {
 
 			// Ottimizzazione - evito override interni alla classe
 			if (actualMethod.contains(method.id)) {
-				System.out.println("Method " + method.id + " at line "+ n.getLine() +" already declared");
+				System.out.println("Method " + method.id + " in class at line "+ n.getLine() +" multiple define");
 				stErrors++;
 			} else {
 				actualMethod.add(method.id);
@@ -340,12 +340,15 @@ public class SymbolTableASTVisitor extends BaseASTVisitor<Void,VoidException> {
 			var isOverride = virtualTable.containsKey(method.id);
 			visitNode(method);
 
-			var methodType = (MethodTypeNode) virtualTable.get(method.id).type;
-			if (isOverride) { // Method override
-				((ClassTypeNode) entry.type).allMethods.set(method.offset, methodType.fun);
-			} else { // no override
-				((ClassTypeNode) entry.type).allMethods.add(methodType.fun);
+			// avoid error if override method with field
+			if (virtualTable.get(method.id).type instanceof MethodTypeNode methodType) {
+				if (isOverride) { // Method override
+					((ClassTypeNode) entry.type).allMethods.set(method.offset, methodType.fun);
+				} else { // no override
+					((ClassTypeNode) entry.type).allMethods.add(methodType.fun);
+				}
 			}
+
 		}
 
 		n.setType(entry.type);
@@ -368,7 +371,7 @@ public class SymbolTableASTVisitor extends BaseASTVisitor<Void,VoidException> {
 			var STentryToOverride = virtualTable.get(n.id);
 
 			if (!(STentryToOverride.type instanceof MethodTypeNode)) { // cannot override field with method
-				System.out.println("Cannot override method id " + n.id + " at line "+ n.getLine() + "with a field");
+				System.out.println("Cannot override field with method id " + n.id + " at line "+ n.getLine());
 				stErrors++;
 			} else {
 				// 1. Virtual Table update

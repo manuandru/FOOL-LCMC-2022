@@ -295,17 +295,32 @@ public class TypeCheckEASTVisitor extends BaseEASTVisitor<TypeNode,TypeException
 		}
 
 		var classType = (ClassTypeNode) n.getType();
-		var superType = (ClassTypeNode) n.superEntry.type;
+		var parentCT = (ClassTypeNode) n.superEntry.type;
 
-		for (var i = 0; i < superType.allFields.size(); i++) {
-			if ( !(isSubtype(classType.allFields.get(i), superType.allFields.get(i))) ) {
-				throw new TypeException("Incompatible type for parameter "+(i+1)+ " override in Class " + n.id, n.getLine());
+		for (var i = 0; i < n.fieldsList.size(); i++) {
+
+			// optimization
+			int position = -n.fieldsList.get(i).offset - 1;
+			if (position < parentCT.allFields.size()) {
+
+				if ( !(isSubtype(classType.allFields.get(position), parentCT.allFields.get(position))) ) {
+					throw new TypeException("Incompatible type for parameter "+(i+1)+ " override in Class " + n.id, n.getLine());
+				}
+
 			}
+
 		}
 
-		for (var i = 0; i < superType.allMethods.size(); i++) {
-			if ( !(isSubtype(classType.allMethods.get(i), superType.allMethods.get(i))) ) {
-				throw new TypeException("Incompatible type for method " +(i+1)+ " override in Class " + n.id, n.getLine());
+		for (var i = 0; i < n.methodsList.size(); i++) {
+
+			// optimization
+			int position = n.methodsList.get(i).offset;
+			if (position < parentCT.allMethods.size()) {
+
+				if (!(isSubtype(classType.allMethods.get(position), parentCT.allMethods.get(position)))) {
+					throw new TypeException("Incompatible type for method " + (i + 1) + " override in Class " + n.id, n.getLine());
+				}
+
 			}
 		}
 

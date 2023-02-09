@@ -314,13 +314,19 @@ public class SymbolTableASTVisitor extends BaseASTVisitor<Void,VoidException> {
 
 					// 2. ClassTypeNode update
 					((ClassTypeNode) entry.type).allFields.set(-STentryToOverride.offset-1, field.getType());
+
+					// Optimization
+					field.offset = STentryToOverride.offset;
 				}
 			} else { // no override
 				// 1. Virtual Table update
-				virtualTable.put(field.id, new STentry(nestingLevel, field.getType(), fieldOffset--));
+				virtualTable.put(field.id, new STentry(nestingLevel, field.getType(), fieldOffset));
 
 				// 2. ClassTypeNode update
 				((ClassTypeNode) entry.type).allFields.add(field.getType());
+
+				// Optimization
+				field.offset = fieldOffset--;
 			}
 		}
 
